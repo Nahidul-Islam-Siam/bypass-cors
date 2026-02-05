@@ -1,0 +1,94 @@
+import express from "express";
+import cors from "cors";
+// import fetch from "node-fetch";
+
+const app = express();
+const port = 3000;
+
+// Use CORS middleware
+app.use(cors());
+app.use(express.json());
+
+// Accept Get Requests
+app.get("/", async (req, res) => {
+    const url = req.query.url;
+    if (!url) {
+        return res.status(400).send("URL is required");
+    }
+
+    try {
+        const response = await fetch(url, {
+            method: "GET",
+            headers: req.headers,
+        });
+
+        // Clone headers from the original response
+        const excludeHeaders = [
+            "transfer-encoding",
+            "content-encoding",
+            "access-control-allow-origin",
+            "age",
+            "cache-control",
+        ];
+
+        for (const [key, value] of response.headers.entries()) {
+            if (!excludeHeaders.includes(key.toLowerCase())) {
+                res.setHeader(key, value);
+            }
+        }
+
+        res.status(response.status);
+        const buffer = Buffer.from(await response.arrayBuffer());
+        res.send(buffer);
+    } catch (error) {
+        res.status(500).send(error.message);
+    }
+});
+
+// Accept All Requests
+app.post("/", async (req, res) => {
+    // Get JSON body of the request
+    let data = req.body;
+    let url = data?.url;
+    let options = data?.options ?? {};
+
+    if (!url) {
+        return res.status(400).send("URL is required");
+    }
+
+    try {
+        const response = await fetch(url, options);
+        // Clone headers from the original response
+        const excludeHeaders = [
+            "transfer-encoding",
+            "content-encoding",
+            "access-control-allow-origin",
+            "age",
+            "cache-control",
+        ];
+
+        for (const [key, value] of response.headers.entries()) {
+            if (!excludeHeaders.includes(key.toLowerCase())) {
+                res.setHeader(key, value);
+            }
+        }
+
+        res.status(response.status);
+        const buffer = Buffer.from(await response.arrayBuffer());
+        res.send(buffer);
+    } catch (error) {
+        res.status(500).send(error.message);
+    }
+});
+
+app.use((err, req, res, next) => {
+    res.status(400).send({
+        success: false,
+        message: "Error Occurred",
+        error: err.message ?? "Request Error",
+    });
+});
+
+app.listen(port, () => {
+    console.log(`Server is running on http://localhost:${port}`);
+});
